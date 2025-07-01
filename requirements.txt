@@ -1,0 +1,6 @@
+streamlit
+pandas
+sklearn
+lightgbm
+shap
+numpy
