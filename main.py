@@ -32,7 +32,8 @@ model_lgb = lgb.LGBMRegressor(
 call_model = {'LinearRegression': model_lr, 'RandomForestRegressor': model_rf, 'SVR': model_SVR, 'lightGBM': model_lgb}
 
 #  app
-st.markdown('<h1 style="text-align: center; ">特徴量選択<span style="color: skyblue;">テスト</span>アプリ😎<h1>', unsafe_allow_html=True)
+st.markdown('<h1 style="text-align: center; ">特徴量選択<span style="color: skyblue;">テスター</span>😎<h1>', unsafe_allow_html=True)
+st.set_page_config(page_title="特徴量選択テスター")
 
 #  options
 ## input data sectioc
