@@ -19,7 +19,7 @@ def model_evaluation(model: LinearRegression, x_train: pd.DataFrame, y_train: pd
     rmse = root_mean_squared_error(model.predict(x_test), y_test)
     num_feature = x_train.shape[1]
     print(f'{'R2_train':10}: {score_train}\n{'R2_test':10}: {score_test}\n{"RMSE":10}: {rmse}')
-    return score_train, score_test, rmse, num_feature
+    return x_train.columns, score_test, rmse, num_feature
 
 def feature_selection_by_method(model: LinearRegression, x_train: pd.DataFrame, y_train: pd.DataFrame, x_test: pd.DataFrame, y_test: pd.DataFrame, method: object|None = None) -> tuple:
     if type(method) == type(None):
