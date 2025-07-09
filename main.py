@@ -32,8 +32,7 @@ model_lgb = lgb.LGBMRegressor(
 call_model = {'LinearRegression': model_lr, 'RandomForestRegressor': model_rf, 'SVR': model_SVR, 'lightGBM': model_lgb}
 
 #  app
-st.title('Variable Selection :blue[Test] :sunglasses:')
-
+st.markdown('<h1 style="text-align: center; ">特徴量選択<span style="color: skyblue;">テスト</span>アプリ😎<h1>', unsafe_allow_html=True)
 
 #  options
 ## input data sectioc
@@ -41,7 +40,7 @@ input_data_error_flag = False
 df_files_name = ['test_california_data']
 df_files = [df_california]
 
-st.subheader('Select input data')
+st.subheader('データインプット', help='Select input data')
 
 input_data_col1, input_data_col2 = st.columns([1, 2])
 with input_data_col1:
@@ -90,7 +89,7 @@ st.divider()
 models_error_flag = False
 models = ['LinearRegression', 'RandomForestRegressor', 'SVR', 'lightGBM']
 
-st.subheader('Select using model')
+st.subheader('機械学習モデルの選択', help='Select using machine learning model')
 
 selected_model = st.multiselect('select model', models, default=models)
 
@@ -107,7 +106,7 @@ vs_methods_filter = ['VIF', 'MI', 'ANOVA']
 vs_methods_wrapper = ['RFECV', 'RFECV_sensitivity', 'RFECV_MI', 'RFECV_SHAP']
 vs_methods_embedded = ['LassoCV', 'ElasticNetCV']
 
-st.subheader('Select valiable selection method')
+st.subheader('変数選択手法の選択', help='Select valiable selection method')
 
 selected_filter_method = st.multiselect('filter method', vs_methods_filter, default=vs_methods_filter[0])
 selected_wrapper_method = st.multiselect('wrapper method', vs_methods_wrapper, default=vs_methods_wrapper[0])
@@ -174,15 +173,29 @@ if vs_error_flag != True and models_error_flag != True:
         cv_RFE_SHAP = expander_method.slider('CV', 2, 10, value=5, key='RFECV_SHAP_cv')
         score_width_SHAP = expander_method.slider('誤差許容幅', 0.0, 1.0, value=0.0, key='RFECV_SHAP_width')
             
-    
-expander_method.text('しょうさいせっていだお')
-
 st.divider()
 
 
 ## start button
 analysis_start_flag = False
-result = []
+all_tasks = (len(selected_filter_method) + len(selected_wrapper_method) + len(selected_embedded_method) + 1) * len(selected_model)
+completed_tasks = 0
+result_csv = []
+result_col = []
+
+### 画面再読み込み時に更新されないようにするデータ
+if 'df_X' not in st.session_state:
+    st.session_state.df_X = None
+if 'result_csv' not in st.session_state:
+    st.session_state.result_csv = None
+if 'result_col' not in st.session_state:
+    st.session_state.result_col = None
+if 'selected_models' not in st.session_state:
+    st.session_state.selected_models = None
+if 'selected_methods' not in st.session_state:
+    st.session_state.selected_methods = None
+if 'finish_analysis' not in st.session_state:
+    st.session_state.finish_analysis = False
 
 _, middle, _ = st.columns(3)
 if middle.button("start", use_container_width=True):
@@ -210,48 +223,155 @@ if analysis_start_flag:
     except Exception as e:
         st.error(f"前処理で予期しないエラーが発生しました: {e}")
 
+    my_bar = st.progress(0, '実行中...')
+    
     for model in selected_model:
-        _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test)
-        result.append(['Nothing', f'{model}', test_score, rmse, num_ferature])
+        feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test)
+        result_csv.append(['Normal(no selection)', f'{model}', test_score, rmse, num_ferature])
+        result_col.append(feat_col)
+        completed_tasks += 1
+        my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
         
         for f_method in selected_filter_method:
             if f_method == 'VIF':
-                _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, filter_vif(x_train, vif))
-                result.append(['VIF', f'{model}', test_score, rmse, num_ferature])
+                feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, filter_vif(x_train, vif))
+                result_csv.append(['VIF', f'{model}', test_score, rmse, num_ferature])
+                result_col.append(feat_col)
+                completed_tasks += 1
+                my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
             if f_method == 'MI':
-                _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, filter_MI(x_train, y_train, percentile_MI))
-                result.append(['MI', f'{model}', test_score, rmse, num_ferature])
+                feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, filter_MI(x_train, y_train, percentile_MI))
+                result_csv.append(['MI', f'{model}', test_score, rmse, num_ferature])
+                result_col.append(feat_col)
+                completed_tasks += 1
+                my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
             if f_method == 'ANOVA':
-                _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, filter_ANOVA(x_train, y_train, percentile_ANOVA))
-                result.append(['ANOVA', f'{model}', test_score, rmse, num_ferature])
+                feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, filter_ANOVA(x_train, y_train, percentile_ANOVA))
+                result_csv.append(['ANOVA', f'{model}', test_score, rmse, num_ferature])
+                result_col.append(feat_col)
+                completed_tasks += 1
+                my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
         
         for w_method in selected_wrapper_method:
             with st.spinner(f'{model} RFECV...', show_time=True):
                 if w_method == 'RFECV':
                     if model == 'SVR':
-                        _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV(call_model['LinearRegression'], x_train, y_train, cv_RFE))
+                        feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV(call_model['LinearRegression'], x_train, y_train, cv_RFE))
                     else:
-                        _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV(call_model[model], x_train, y_train, cv_RFE))
-                    result.append(['RFECV', f'{model}', test_score, rmse, num_ferature])
+                        feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV(call_model[model], x_train, y_train, cv_RFE))
+                    result_csv.append(['RFECV', f'{model}', test_score, rmse, num_ferature])
+                    result_col.append(feat_col)
+                    completed_tasks += 1
+                    my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
             with st.spinner(f'{model} RFECV_sensitivity...', show_time=True):
                 if w_method == 'RFECV_sensitivity':
-                    _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV_sensitivity(call_model[model], x_train, y_train, cv_RFE_sensitivity, score_width_sensitivity))
-                    result.append(['RFECV_sensitivity', f'{model}', test_score, rmse, num_ferature])
+                    feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV_sensitivity(call_model[model], x_train, y_train, cv_RFE_sensitivity, score_width_sensitivity))
+                    result_csv.append(['RFECV_sensitivity', f'{model}', test_score, rmse, num_ferature])
+                    result_col.append(feat_col)
+                    completed_tasks += 1
+                    my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
             with st.spinner(f'{model} RFECV_MI...', show_time=True):
                 if w_method == 'RFECV_MI':
-                    _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV_MI(call_model[model], x_train, y_train, cv_RFE_MI, score_width_MI))
-                    result.append(['RFECV_MI', f'{model}', test_score, rmse, num_ferature])
+                    feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV_MI(call_model[model], x_train, y_train, cv_RFE_MI, score_width_MI))
+                    result_csv.append(['RFECV_MI', f'{model}', test_score, rmse, num_ferature])
+                    result_col.append(feat_col)
+                    completed_tasks += 1
+                    my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
             with st.spinner(f'{model} RFECV_SHAP...', show_time=True):
                 if w_method == 'RFECV_SHAP':
-                    _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV_SHAP(call_model[model], x_train, y_train, cv_RFE_SHAP, score_width_SHAP))
-                    result.append(['RFECV_SHAP', f'{model}', test_score, rmse, num_ferature])
+                    feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, wrapper_RFECV_SHAP(call_model[model], x_train, y_train, cv_RFE_SHAP, score_width_SHAP))
+                    result_csv.append(['RFECV_SHAP', f'{model}', test_score, rmse, num_ferature])
+                    result_col.append(feat_col)
+                    completed_tasks += 1
+                    my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
 
         for e_method in selected_embedded_method:
-            if e_method == 'LassoCV':
-                _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, embbeded_lasso(x_train, y_train))
-                result.append(['LassoCV', f'{model}', test_score, rmse, num_ferature])
-            if e_method == 'ElasticNetCV':
-                _, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, embbeded_elasticnet(x_train, y_train))
-                result.append(['ElasticNetCV', f'{model}', test_score, rmse, num_ferature])
+            with st.spinner(f'{model} LassoCV...', show_time=True):
+                if e_method == 'LassoCV':
+                    feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, embbeded_lasso(x_train, y_train))
+                    result_csv.append(['LassoCV', f'{model}', test_score, rmse, num_ferature])
+                    result_col.append(feat_col)
+                    completed_tasks += 1
+                    my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
+            with st.spinner(f'{model} ElasticNetCV...', show_time=True):
+                if e_method == 'ElasticNetCV':
+                    feat_col, test_score, rmse, num_ferature = feature_selection_by_method(call_model[model], x_train, y_train, x_test, y_test, embbeded_elasticnet(x_train, y_train))
+                    result_csv.append(['ElasticNetCV', f'{model}', test_score, rmse, num_ferature])
+                    result_col.append(feat_col)
+                    completed_tasks += 1
+                    my_bar.progress(int(completed_tasks/all_tasks * 100), '実行中...')
+    
+    st.session_state.df_X = df_X
+    st.session_state.result_csv = result_csv
+    st.session_state.result_col = result_col
+    st.session_state.selected_models = selected_model
+    st.session_state.selected_methods = ['Normal'] + selected_filter_method + selected_wrapper_method + selected_embedded_method
+    st.session_state.finish_analysis = True
 
-    st.dataframe(pd.DataFrame(result, columns=['Method', 'Model', 'R2', 'RMSE', 'Num_feature']))
+## analysis results
+if st.session_state.finish_analysis:
+    selected_models = st.session_state.selected_models
+    selected_methods = st.session_state.selected_methods
+    meta_df = st.session_state.df_X
+    
+    # analysis result
+    st.markdown('<br>', unsafe_allow_html=True)
+    st.subheader("分析結果")
+    st.dataframe(pd.DataFrame(st.session_state.result_csv, columns=['Method', 'Model', 'R2', 'RMSE', 'Num_feature']), hide_index=True)
+    
+    # show selected features
+    expander_result = st.expander("選択された特徴量")
+    is_show_rej_col = expander_result.toggle("除外した特徴量を表示する", value=True)
+    for i in range(len(st.session_state.selected_models)):
+        expander_result.subheader(f"{st.session_state.selected_models[i]}")
+        for j in range(len(st.session_state.selected_methods)):
+            picked_model = st.session_state.selected_models[i]
+            picked_method = st.session_state.selected_methods[j]
+            expander_result.text(picked_method)
+            sel_col = st.session_state.result_col[selected_methods.index(picked_method) + len(selected_methods) * selected_models.index(picked_model)].tolist()
+            all_col = meta_df.columns.tolist()
+            markdown_col = ""
+            for col in all_col:
+                if col in sel_col:
+                    markdown_col += f":blue-badge[{col}] "
+                elif col not in sel_col and is_show_rej_col:
+                    markdown_col += f":gray-badge[{col}] "
+            expander_result.markdown(markdown_col)
+    
+    # output analysis result
+    df_res = pd.DataFrame(st.session_state.result_csv)
+    df_csv = pd.DataFrame(st.session_state.result_col)
+    df_con = pd.concat([df_res, df_csv], axis=1)
+    df_con.columns = ['Method', 'Model', 'R2', 'RMSE', 'Num_feature'] + [f'col_{i}' for i in range(len(all_col))]
+    
+    st.download_button(
+                    label="分析結果の出力（csv）",
+                    data=df_con.to_csv().encode("utf-8"),
+                    file_name=f"VariableSelection_Conclusion_{df_files_name[-1]}.csv",
+                    mime="text/csv",
+                    icon=":material/download:",
+                    use_container_width=True
+                    )
+
+    # output dataset
+    st.markdown('<br>', unsafe_allow_html=True)
+    st.subheader("変数選択済みデータの出力")
+    output_data_col1, output_data_col2 = st.columns(2)
+    with output_data_col1:
+        output_model = st.selectbox('select model', selected_models)
+    
+    with output_data_col2:
+        output_method = st.selectbox('select method', selected_methods)
+    
+    with st.spinner(f'CSV 準備中...', show_time=True):
+        output_col = st.session_state.result_col[selected_methods.index(output_method) + len(selected_methods) * selected_models.index(output_model)]
+        output_csv = meta_df.loc[:, output_col.tolist()].to_csv().encode("utf-8")
+
+    st.download_button(
+                    label="変数選択済みデータの出力（csv）",
+                    data=output_csv,
+                    file_name=f"{output_model}-{output_method}_{df_files_name[-1]}.csv",
+                    mime="text/csv",
+                    icon=":material/download:",
+                    use_container_width=True
+                    )
