@@ -107,18 +107,18 @@ vs_methods_filter = ['VIF', 'MI', 'ANOVA']
 vs_methods_wrapper = ['RFECV', 'RFECV_sensitivity', 'RFECV_MI', 'RFECV_SHAP']
 vs_methods_embedded = ['LassoCV', 'ElasticNetCV']
 
-st.subheader('変数選択手法の選択', help='Select valiable selection method')
+st.subheader('特徴量選択手法の選択', help='Select valiable selection method')
 
 selected_filter_method = st.multiselect('filter method', vs_methods_filter, default=vs_methods_filter[0])
 selected_wrapper_method = st.multiselect('wrapper method', vs_methods_wrapper, default=vs_methods_wrapper[0])
 selected_embedded_method = st.multiselect('embedded method', vs_methods_embedded, default=vs_methods_embedded[1])
 
 if (selected_filter_method == []) and (selected_wrapper_method == []) and (selected_embedded_method == []):
-    st.warning('少なくとも１つ変数選択手法を選択してください。')
+    st.warning('少なくとも１つ特徴量選択手法を選択してください。')
     vs_error_flag = True
 
 expander_data = st.expander('データの前処理の詳細設定')
-expander_method = st.expander("変数選択手法の詳細設定")
+expander_method = st.expander("特徴量選択手法の詳細設定")
 
 if input_data_error_flag != True:
     if df_files_name.index(selected_csv) != 0:
@@ -356,7 +356,7 @@ if st.session_state.finish_analysis:
 
     # output dataset
     st.markdown('<br>', unsafe_allow_html=True)
-    st.subheader("変数選択済みデータの出力")
+    st.subheader("特徴量選択済みデータの出力")
     output_data_col1, output_data_col2 = st.columns(2)
     with output_data_col1:
         output_model = st.selectbox('select model', selected_models)
@@ -369,7 +369,7 @@ if st.session_state.finish_analysis:
         output_csv = meta_df.loc[:, output_col.tolist()].to_csv().encode("utf-8")
 
     st.download_button(
-                    label="変数選択済みデータの出力（csv）",
+                    label="特徴量選択済みデータの出力（csv）",
                     data=output_csv,
                     file_name=f"{output_model}-{output_method}_{df_files_name[-1]}.csv",
                     mime="text/csv",
